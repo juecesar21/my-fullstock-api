@@ -1,0 +1,77 @@
+
+# REST API Test File
+
+# =====================
+# Variables
+# =====================
+
+@baseUrl = http://localhost:3000/api
+@testEmail = michael@mail.com
+@testPassword = letmeinP37+
+
+
+# =====================
+# Auth Endpoints
+# =====================
+
+### Register a new user
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}",
+  "confirmPassword": "{{testPassword}}"
+}
+
+### Login
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+### Get current user profile (requires login)
+GET {{baseUrl}}/me
+
+### Logout (requires login)
+POST {{baseUrl}}/logout
+
+# =====================
+# Category Endpoints
+# =====================
+
+### List all categories
+GET {{baseUrl}}/categories
+
+# =====================
+# Product Endpoints
+# =====================
+
+### List products by category
+GET {{baseUrl}}/categories/1/products
+
+### Get product by id
+GET {{baseUrl}}/products/1
+
+# =====================
+# Carts Endpoints
+# =====================
+
+### get cart
+GET {{baseUrl}}/cart
+
+### add item to cart
+PUT {{baseUrl}}/cart/items/5
+Content-Type: application/json
+
+{
+  "quantity": 2
+}
+### Remove item from cart
+DELETE {{baseUrl}}/cart/items/1
+
+### Clear cart
+POST {{baseUrl}}/cart/clear
