@@ -74,4 +74,7 @@ export const orderServices = {
 
     return order;
   },
+  async getOrdersByUserId(userId: number): Promise<Order[]> {
+    return orderRepository.getOrdersByUserId(userId);
+  },
 };
