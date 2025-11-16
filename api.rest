@@ -97,3 +97,6 @@ Content-Type: application/json
     "phone": "+51987654321"
   }
 }
+
+### Get orders from current user
+GET {{baseUrl}}/orders
