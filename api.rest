@@ -76,6 +76,9 @@ DELETE {{baseUrl}}/cart/items/1
 ### Clear cart
 POST {{baseUrl}}/cart/clear
 
+# =====================
+# Orders Endpoints
+# =====================
 
 ### Create order from cart
 POST {{baseUrl}}/orders
