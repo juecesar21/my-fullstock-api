@@ -26,4 +26,16 @@ export const orderController = {
       return next(error);
     }
   },
+  async getUserOrders(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.session;
+      if (!userId) {
+        return res.status(401).json({ error: "Usuario no autorizado" });
+      }
+      const orders = await orderServices.getOrdersByUserId(userId);
+      return res.status(200).json({ data: orders });
+    } catch (error) {
+      return next(error);
+    }
+  },
 };
