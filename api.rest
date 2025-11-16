@@ -75,3 +75,22 @@ DELETE {{baseUrl}}/cart/items/1
 
 ### Clear cart
 POST {{baseUrl}}/cart/clear
+
+
+### Create order from cart
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "shippingInfo": {
+    "firstName": "Pepito",
+    "lastName": "Quispe",
+    "address": "Jr. Londres #159",
+    "city": "Lima",
+    "country": "Estados Unidos",
+    "state": "Texas",
+    "postalCode": "010101",
+    "phone": "+51987654321"
+  }
+}
