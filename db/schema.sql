@@ -1,4 +1,4 @@
-\restrict 13YFgyhWBWqzMgi1KJmbc44vAsjfcefDoyievT2VvvEVdUdF3s4If33oewnjcy0
+\restrict crGIzKUQsuvGwZnq1MYBBmKXtgoBzN8t4Br6HTcnX7RtVtPqlg309BBaNisV06d
 
 -- Dumped from database version 16.10 (Ubuntu 16.10-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.10 (Ubuntu 16.10-0ubuntu0.24.04.1)
@@ -510,7 +510,7 @@ ALTER TABLE ONLY public.products
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 13YFgyhWBWqzMgi1KJmbc44vAsjfcefDoyievT2VvvEVdUdF3s4If33oewnjcy0
+\unrestrict crGIzKUQsuvGwZnq1MYBBmKXtgoBzN8t4Br6HTcnX7RtVtPqlg309BBaNisV06d
 
 
 --
@@ -522,5 +522,7 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20250918012624'),
     ('20250930011032'),
     ('20251001221842'),
+    ('20251023013934'),
     ('20251023235844'),
+    ('20251105004100'),
     ('20251106214044');
