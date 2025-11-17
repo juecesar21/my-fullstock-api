@@ -46,4 +46,12 @@ export const orderRepository = {
       client.release();
     }
   },
+
+  async getOrdersByUserId(userId: number): Promise<Order[]> {
+    const result = await query<Order>(
+      `SELECT * FROM orders WHERE user_id = $1 ORDER BY  created_at DESC`,
+      [userId]
+    );
+    return result.rows;
+  },
 };
