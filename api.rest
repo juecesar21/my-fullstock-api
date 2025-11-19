@@ -100,3 +100,6 @@ Content-Type: application/json
 
 ### Get orders from current user
 GET {{baseUrl}}/orders
+
+### Get orders from current user
+GET {{baseUrl}}/orders/1/items
