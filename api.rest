@@ -36,6 +36,15 @@ Content-Type: application/json
 ### Get current user profile (requires login)
 GET {{baseUrl}}/me
 
+### Update user profile (requires login)
+PATCH {{baseUrl}}/profile
+Content-Type: application/json
+
+{
+  "email": "michaelp@gmail.com",
+  "password": "letmeinP37++"
+}
+
 ### Logout (requires login)
 POST {{baseUrl}}/logout
 
