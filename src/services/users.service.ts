@@ -1,5 +1,5 @@
 import { usersRepository } from "@/repositories/users.repository.js";
-import { ConflictError } from "@/shared/errors.js";
+import { ConflictError, NotFoundError } from "@/shared/errors.js";
 import { hashPassword } from "@/shared/hash.js";
 
 export const usersService = {
@@ -28,5 +28,27 @@ export const usersService = {
   async getUserById(id: number) {
     const user = await usersRepository.findById(id);
     return user;
+  },
+  async updateUserData(
+    id: number,
+    data: Partial<{ email: string; password: string }>
+  ) {
+    const user = await usersRepository.findById(id);
+    if (!user) {
+      throw new NotFoundError("Usuario no encontrado");
+    }
+    if (data.email) {
+      const existingUser = await usersRepository.findByEmail(data.email);
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictError("Correo electrónico ya registrado");
+      }
+    }
+
+    if (data.password) {
+      data.password = await hashPassword(data.password);
+    }
+
+    const updateUser = await usersRepository.updateUserData(id, data);
+    return updateUser;
   },
 };
