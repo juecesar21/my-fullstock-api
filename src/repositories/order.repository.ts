@@ -46,4 +46,25 @@ export const orderRepository = {
       client.release();
     }
   },
+
+  async getOrdersByUserId(userId: number): Promise<Order[]> {
+    const result = await query<Order>(
+      `SELECT * FROM orders WHERE user_id = $1 ORDER BY  created_at DESC`,
+      [userId]
+    );
+    return result.rows;
+  },
+  async getOrderItemsByOrderId(orderId: number): Promise<OrderItemsDto[]> {
+    const result = await query<OrderItemsDto>(
+      `SELECT + FROM order_items WHERE order_id = $1 ORDER BY created_at DESC`,
+      [orderId]
+    );
+    return result.rows;
+  },
+  async getOrder(orderId: number): Promise<Order | null> {
+    const result = await query<Order>(`SELECT * FROM orders WHERE id = $1`, [
+      orderId,
+    ]);
+    return result.rows[0] || null;
+  },
 };

@@ -59,3 +59,10 @@ export const createOrderSchema = z.object({
     .toLowerCase(),
   shippingInfo: shippingInfoSchema,
 });
+
+export const orderIdSchema = z.object({
+  orderId: z.coerce
+    .number("El Id de la orden debe ser un numero")
+    .int("El Id de la orden debe ser un numero entero")
+    .positive("El Id de la orden debe ser un numero positivo"),
+});

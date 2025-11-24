@@ -74,4 +74,18 @@ export const orderServices = {
 
     return order;
   },
+
+  async getOrdersByUserId(userId: number): Promise<Order[]> {
+    return orderRepository.getOrdersByUserId(userId);
+  },
+
+  async getOrderById(orderId: number): Promise<Order | null> {
+    const order = await orderRepository.getOrder(orderId);
+    return order;
+  },
+
+  async getOrderItemsByOrderId(orderId: number): Promise<OrderItemsDto[]> {
+    const items = orderRepository.getOrderItemsByOrderId(orderId);
+    return items;
+  },
 };
