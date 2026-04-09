@@ -10,7 +10,7 @@ export const orderRepository = {
     try {
       await client.query("BEGIN");
       const orderResult = await client.query<Order>(
-        `INSERT INTO orders (userId, email, shippingInfo,status, total) 
+        `INSERT INTO orders (user_id, email, shipping_info,status, total) 
         VALUES ($1, $2, $3, $4, $5) 
         RETURNING *`,
         [
@@ -24,7 +24,7 @@ export const orderRepository = {
       const order = orderResult.rows[0]!;
       for (const item of items) {
         await client.query<OrderItemsDto>(
-          `INSERT INTO orderItems (orderId, productId, title, imgSrc, quantity, price, lineTotal)
+          `INSERT INTO order_items (order_id, product_id, title, img_src, quantity, price, line_total)
             VALUES ($1,$2, $3, $4, $5, $6, $7)`,
           [
             order?.id,
@@ -40,7 +40,7 @@ export const orderRepository = {
       await client.query("COMMIT");
       return order;
     } catch (error) {
-      await query("ROLBACK");
+      await query("ROLLBACK");
       throw error;
     } finally {
       client.release();
@@ -49,14 +49,14 @@ export const orderRepository = {
 
   async getOrdersByUserId(userId: number): Promise<Order[]> {
     const result = await query<Order>(
-      `SELECT * FROM orders WHERE user_id = $1 ORDER BY  created_at DESC`,
+      `SELECT * FROM orders WHERE user_id = $1 ORDER BY  create_at DESC`,
       [userId]
     );
     return result.rows;
   },
   async getOrderItemsByOrderId(orderId: number): Promise<OrderItemsDto[]> {
     const result = await query<OrderItemsDto>(
-      `SELECT + FROM order_items WHERE order_id = $1 ORDER BY created_at DESC`,
+      `SELECT + FROM order_items WHERE order_id = $1 ORDER BY create_at DESC`,
       [orderId]
     );
     return result.rows;

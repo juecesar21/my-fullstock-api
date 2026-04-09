@@ -17,7 +17,7 @@ export const cartsRepository = {
 
   async findCartItemByCartId(cartId: number): Promise<CartItem[]> {
     const result = await query<CartItem>(
-      "SELECT * FROM carts WHERE cart_id = $1",
+      "SELECT * FROM cart_items WHERE cart_id = $1",
       [cartId]
     );
     return result.rows;
@@ -31,7 +31,7 @@ export const cartsRepository = {
     if (!result.rows[0]) {
       throw new Error("Failed to create cart");
     }
-    return result.rows[0];
+    return result.rows[0] || null;
   },
   async upsertCartItem(
     cartId: number,
@@ -42,15 +42,15 @@ export const cartsRepository = {
       `INSERT INTO cart_items (cart_id, product_id, quantity)
        VALUES ($1, $2, $3) 
        ON CONFLICT (cart_id, product_id)
-        DO UPDATE SET quantity = $3, updated_at = NOW()
-        RETURNNIG *
+        DO UPDATE SET quantity = $3, update_at = NOW()
+        RETURNING *
        `,
       [cartId, productId, quantity]
     );
     if (!result.rows[0]) {
       throw new Error("Failed to upsert cart item");
     }
-    return result.rows[0];
+    return result.rows[0] || null;
   },
   async deleteCartItem(cartId: number, productId: number): Promise<void> {
     await query<Cart>(
