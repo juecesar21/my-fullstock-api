@@ -47,7 +47,7 @@ export const orderController = {
         throw new UnauthorizedError("Usuario no autorizado");
       }
       const order = await orderServices.getOrderById(orderId);
-      if (!orderId) {
+      if (!order) {
         throw new BadRequestError("Orden no encontrada");
       }
       if (order?.userId !== userId) {
