@@ -21,7 +21,7 @@ const sessionMiddleware = session({
   rolling: true,
   cookie: {
     httpOnly: true,
-    sameSite: "strict",
+    sameSite: isProduction ? "strict" : "lax",
     secure: isProduction,
     maxAge: env.SESSION_MAX_AGE_HOURS * 60 * 60 * 1000,
   },

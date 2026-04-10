@@ -1,7 +1,7 @@
-\restrict crGIzKUQsuvGwZnq1MYBBmKXtgoBzN8t4Br6HTcnX7RtVtPqlg309BBaNisV06d
+\restrict Q5Lx4dU4LrI1rhhcI6NZ9dftPqdfJjGYshgYneXCmb2BGxFA0wVfKvbP0Rmm6pw
 
--- Dumped from database version 16.10 (Ubuntu 16.10-0ubuntu0.24.04.1)
--- Dumped by pg_dump version 16.10 (Ubuntu 16.10-0ubuntu0.24.04.1)
+-- Dumped from database version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
+-- Dumped by pg_dump version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -510,7 +510,7 @@ ALTER TABLE ONLY public.products
 -- PostgreSQL database dump complete
 --
 
-\unrestrict crGIzKUQsuvGwZnq1MYBBmKXtgoBzN8t4Br6HTcnX7RtVtPqlg309BBaNisV06d
+\unrestrict Q5Lx4dU4LrI1rhhcI6NZ9dftPqdfJjGYshgYneXCmb2BGxFA0wVfKvbP0Rmm6pw
 
 
 --
@@ -522,7 +522,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20250918012624'),
     ('20250930011032'),
     ('20251001221842'),
-    ('20251023013934'),
     ('20251023235844'),
-    ('20251105004100'),
     ('20251106214044');
