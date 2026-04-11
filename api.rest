@@ -73,14 +73,14 @@ GET {{baseUrl}}/products/1
 GET {{baseUrl}}/cart
 
 ### add item to cart
-PUT {{baseUrl}}/cart/items/5
+PATCH {{baseUrl}}/cart/items/5
 Content-Type: application/json
 
 {
-  "quantity": 2
+  "quantity": 5
 }
 ### Remove item from cart
-DELETE {{baseUrl}}/cart/items/1
+DELETE {{baseUrl}}/cart/items/3
 
 ### Clear cart
 POST {{baseUrl}}/cart/clear
@@ -100,8 +100,8 @@ Content-Type: application/json
     "lastName": "Quispe",
     "address": "Jr. Londres #159",
     "city": "Lima",
-    "country": "Estados Unidos",
-    "state": "Texas",
+    "country": "Peru",
+    "state": "Arequipa",
     "postalCode": "010101",
     "phone": "+51987654321"
   }
