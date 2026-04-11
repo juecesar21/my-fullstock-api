@@ -2,9 +2,9 @@ export interface ShippingInfo {
   firstName: string;
   lastName: string;
   company?: string | undefined;
-  addres: string;
+  address: string;
   city: string;
-  coutry: string;
+  country: string;
   state: string;
   postalCode: string;
   phone: string;
