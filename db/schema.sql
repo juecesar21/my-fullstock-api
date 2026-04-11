@@ -1,11 +1,12 @@
-\restrict Q5Lx4dU4LrI1rhhcI6NZ9dftPqdfJjGYshgYneXCmb2BGxFA0wVfKvbP0Rmm6pw
+\restrict H37S9Q9Junt4tA4dyzkaKwtaaZaOvrZapsqM3Pag8j7IG9i3odZI2G1F9lI8HnI
 
--- Dumped from database version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
--- Dumped by pg_dump version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
+-- Dumped from database version 15.15 (Homebrew)
+-- Dumped by pg_dump version 18.1 (Homebrew)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -510,7 +511,7 @@ ALTER TABLE ONLY public.products
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Q5Lx4dU4LrI1rhhcI6NZ9dftPqdfJjGYshgYneXCmb2BGxFA0wVfKvbP0Rmm6pw
+\unrestrict H37S9Q9Junt4tA4dyzkaKwtaaZaOvrZapsqM3Pag8j7IG9i3odZI2G1F9lI8HnI
 
 
 --
