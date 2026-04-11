@@ -13,7 +13,7 @@ export const shippingInfoSchema = z.object({
 
   company: z.string().trim().optional(),
 
-  addres: z
+  address: z
     .string({ error: "La dirección es obligatoria" })
     .trim()
     .min(5, "La dirección debe tener al menos 5 caracteres"),
@@ -23,7 +23,7 @@ export const shippingInfoSchema = z.object({
     .trim()
     .min(4, "La ciudad debe tener al menos 2 caracteres"),
 
-  coutry: z
+  country: z
     .string({ error: "El país es obligatorio" })
     .trim()
     .min(2, "El país debe tener al menos 2 caracteres"),
