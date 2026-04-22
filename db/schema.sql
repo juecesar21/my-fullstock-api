@@ -1,11 +1,12 @@
 \restrict LibdQsU32R8hPIHZ3f9hSt1pD2hrCCJR4qZi3SzHSuGSX9EEl6RU8h541EYegfD
 
--- Dumped from database version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
--- Dumped by pg_dump version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
+-- Dumped from database version 15.15 (Homebrew)
+-- Dumped by pg_dump version 18.1 (Homebrew)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
