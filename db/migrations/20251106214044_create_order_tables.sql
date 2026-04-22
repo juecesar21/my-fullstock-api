@@ -6,8 +6,8 @@ CREATE TABLE orders (
     shipping_info JSONB NOT NULL,
     status TEXT NOT NULL DEFAULT 'PENDING',
     total NUMERIC(10, 2) NOT NULL CHECK (total >= 0),
-    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE order_items (
@@ -19,8 +19,8 @@ CREATE TABLE order_items (
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     price INTEGER NOT NULL CHECK (price > 0),
     line_total INTEGER NOT NULL CHECK (line_total >= 0),
-    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(order_id, product_id)
 );
 

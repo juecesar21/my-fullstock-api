@@ -1,4 +1,4 @@
-\restrict H37S9Q9Junt4tA4dyzkaKwtaaZaOvrZapsqM3Pag8j7IG9i3odZI2G1F9lI8HnI
+\restrict LibdQsU32R8hPIHZ3f9hSt1pD2hrCCJR4qZi3SzHSuGSX9EEl6RU8h541EYegfD
 
 -- Dumped from database version 15.15 (Homebrew)
 -- Dumped by pg_dump version 18.1 (Homebrew)
@@ -28,8 +28,8 @@ CREATE TABLE public.cart_items (
     cart_id integer NOT NULL,
     product_id integer NOT NULL,
     quantity integer NOT NULL,
-    create_at timestamp with time zone DEFAULT now() NOT NULL,
-    update_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT cart_items_quantity_check CHECK ((quantity > 0))
 );
 
@@ -61,8 +61,8 @@ ALTER SEQUENCE public.cart_items_id_seq OWNED BY public.cart_items.id;
 CREATE TABLE public.carts (
     id integer NOT NULL,
     user_id integer,
-    create_at timestamp with time zone DEFAULT now() NOT NULL,
-    update_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -135,8 +135,8 @@ CREATE TABLE public.order_items (
     quantity integer NOT NULL,
     price integer NOT NULL,
     line_total integer NOT NULL,
-    create_at timestamp with time zone DEFAULT now() NOT NULL,
-    update_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT order_items_line_total_check CHECK ((line_total >= 0)),
     CONSTRAINT order_items_price_check CHECK ((price > 0)),
     CONSTRAINT order_items_quantity_check CHECK ((quantity > 0))
@@ -174,8 +174,8 @@ CREATE TABLE public.orders (
     shipping_info jsonb NOT NULL,
     status text DEFAULT 'PENDING'::text NOT NULL,
     total numeric(10,2) NOT NULL,
-    create_at timestamp with time zone DEFAULT now() NOT NULL,
-    update_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT orders_total_check CHECK ((total >= (0)::numeric))
 );
 
@@ -511,7 +511,7 @@ ALTER TABLE ONLY public.products
 -- PostgreSQL database dump complete
 --
 
-\unrestrict H37S9Q9Junt4tA4dyzkaKwtaaZaOvrZapsqM3Pag8j7IG9i3odZI2G1F9lI8HnI
+\unrestrict LibdQsU32R8hPIHZ3f9hSt1pD2hrCCJR4qZi3SzHSuGSX9EEl6RU8h541EYegfD
 
 
 --
