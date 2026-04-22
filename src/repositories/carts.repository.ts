@@ -17,7 +17,7 @@ export const cartsRepository = {
 
   async findCartItemByCartId(cartId: number): Promise<CartItem[]> {
     const result = await query<CartItem>(
-      "SELECT * FROM cart_items WHERE cart_id = $1",
+      "SELECT * FROM cart_items WHERE cart_id = $1 ORDER BY created_at DESC",
       [cartId]
     );
     return result.rows;
@@ -42,7 +42,7 @@ export const cartsRepository = {
       `INSERT INTO cart_items (cart_id, product_id, quantity)
        VALUES ($1, $2, $3) 
        ON CONFLICT (cart_id, product_id)
-        DO UPDATE SET quantity = $3, update_at = NOW()
+        DO UPDATE SET quantity = $3, updated_at = NOW()
         RETURNING *
        `,
       [cartId, productId, quantity]
