@@ -2,9 +2,9 @@ export interface ShippingInfo {
   firstName: string;
   lastName: string;
   company?: string | undefined;
-  addres: string;
+  address: string;
   city: string;
-  coutry: string;
+  country: string;
   state: string;
   postalCode: string;
   phone: string;
@@ -16,8 +16,8 @@ export interface Order {
   shippingInfo: ShippingInfo;
   status: string | null;
   total: number;
-  createAt: string;
-  updateAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 export interface OrderDto {
   userId: number | null;
@@ -25,8 +25,8 @@ export interface OrderDto {
   shippingInfo: ShippingInfo;
   status: string | null;
   total: number;
-  // createAt: string;
-  // updateAt: string;
+  // createdAt: string;
+  // updatedAt: string;
 }
 export interface OrderItems {
   id: number;
@@ -37,8 +37,8 @@ export interface OrderItems {
   quantity: number;
   price: number;
   lineTotal: number;
-  createAt: string;
-  updateAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 export interface OrderItemsDto {
   productId: number;
