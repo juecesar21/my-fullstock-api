@@ -15,17 +15,20 @@ export function commitSession(
   data: Partial<SessionData>
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const sessionData = { ...req.session, ...data };
+    const previousCartId = req.session.cartId;
     req.session.regenerate((err) => {
       if (err) {
         reject(err instanceof Error ? err : new Error(String(err)));
         return;
       }
+      // Restore cartId if it existed before regeneration 
+      if (previousCartId !== undefined) {
+        req.session.cartId = previousCartId;
+      }
 
-      Object.assign<SessionData, Partial<SessionData>>(
-        req.session,
-        sessionData
-      );
+      if (data.userId !== undefined) {
+        req.session.userId = data.userId;
+      }
 
       req.session.save((saveErr) => {
         if (saveErr) {
@@ -37,6 +40,19 @@ export function commitSession(
 
         resolve();
       });
+    });
+  });
+}
+
+// Promisified version of req.session.save
+export function saveSession(req: Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.save((err) => {
+      if (err) {
+        reject(err instanceof Error ? err : new Error(String(err)));
+        return;
+      }
+      resolve();
     });
   });
 }

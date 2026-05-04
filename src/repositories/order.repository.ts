@@ -49,14 +49,14 @@ export const orderRepository = {
 
   async getOrdersByUserId(userId: number): Promise<Order[]> {
     const result = await query<Order>(
-      `SELECT * FROM orders WHERE user_id = $1 ORDER BY  create_at DESC`,
+      `SELECT * FROM orders WHERE user_id = $1 ORDER BY  created_at DESC`,
       [userId]
     );
     return result.rows;
   },
   async getOrderItemsByOrderId(orderId: number): Promise<OrderItemsDto[]> {
     const result = await query<OrderItemsDto>(
-      `SELECT * FROM order_items WHERE order_id = $1 ORDER BY create_at DESC`,
+      `SELECT * FROM order_items WHERE order_id = $1 ORDER BY created_at DESC`,
       [orderId]
     );
     return result.rows;

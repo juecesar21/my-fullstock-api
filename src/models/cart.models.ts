@@ -17,7 +17,7 @@ export interface HydratedCartItem {
   name: string;
   imageUrl: string | null;
   quantity: number;
-  unicePrice: number;
+  unitPrice: number;
   lineTotal: number;
 }
 

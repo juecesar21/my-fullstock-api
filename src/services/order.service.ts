@@ -59,7 +59,7 @@ export const orderServices = {
       title: item.name,
       imgSrc: item.imageUrl,
       quantity: item.quantity,
-      price: item.unicePrice,
+      price: item.unitPrice,
       lineTotal: item.lineTotal,
     }));
     // Calcular el total de la orden

@@ -79,7 +79,7 @@ export const cartService = {
         name: product.title,
         imageUrl: product.imgSrc,
         quantity: item.quantity,
-        unicePrice: product.price,
+        unitPrice: product.price,
         lineTotal: lineTotal,
       });
       itemCount += item.quantity;
