@@ -317,26 +317,45 @@ fullstock-api-pro-1025/
 │   │
 │   ├── routes/                 # Route definitions by feature
 │   │   ├── auth.routes.ts
+│   │   ├── cart.routes.ts
 │   │   ├── categories.routes.ts
-│   │   └── products.routes.ts
+│   │   └── order.routes.ts
+│   │   ├── products.routes.ts
+│   │   └── users.routes.ts
 │   │
 │   ├── controllers/            # Request/response handlers
 │   │   ├── auth.controller.ts
+│   │   ├── cart.controller.ts
 │   │   ├── categories.controller.ts
-│   │   └── products.controller.ts
+│   │   ├── order.controller.ts
+│   │   ├── products.controller.ts
+│   │   └── users.controller.ts
 │   │
 │   ├── services/               # Business logic layer
+│   │   ├── cart.service.ts
 │   │   ├── categories.service.ts
+│   │   ├── order.service.ts
 │   │   ├── products.service.ts
 │   │   └── users.service.ts
 │   │
 │   ├── repositories/           # Data access layer
+│   │   ├── cart.repository.ts
 │   │   ├── categories.repository.ts
+│   │   ├── order.repository.ts
 │   │   ├── products.repository.ts
 │   │   └── users.repository.ts
 │   │
+│   ├── schemas/                 # Zod validation schemas
+│   │   ├── auth.schemas.ts
+│   │   ├── cart.schemas.ts
+│   │   ├── order.schemas.ts
+│   │   ├── product.schemas.ts
+│   │   └── user.schemas.ts
+│   │
 │   ├── models/                 # TypeScript interfaces/types
+│   │   ├── cart.model.ts
 │   │   ├── category.model.ts
+│   │   ├── order.model.ts
 │   │   ├── product.model.ts
 │   │   └── user.model.ts
 │   │
@@ -389,6 +408,9 @@ The application follows a **strict layered architecture** with clear separation 
 │  /api/categories → categoriesController                     │
 │  /api/products → productsController                         │
 │  /api/register → authController                             │
+│  /api/cart → cartController                             │
+│  /api/order → orderController                             │
+│  /api/profile → usersController                             │
 └───────────────────────────┬─────────────────────────────────┘
                             │
                             ▼
@@ -604,6 +626,24 @@ The database consists of four main tables that support the e-commerce functional
 └─────────────┘
 
 ┌─────────────┐
+│   carts     │──┐
+└─────────────┘  │
+                 │ 1:N
+                 │
+┌─────────────┐  │
+│ cart items  │◄─┘
+└─────────────┘
+
+┌─────────────┐
+│   orders    │──┐
+└─────────────┘  │
+                 │ 1:N
+                 │
+┌─────────────┐  │
+│ order items │◄─┘
+└─────────────┘
+
+┌─────────────┐
 │  sessions   │
 └─────────────┘
 ```
@@ -715,7 +755,45 @@ CREATE TABLE users (
 - **Password is hashed**: Never stores plain text (uses bcryptjs)
 - **No personal info yet**: Minimal viable authentication (can extend later)
 
-#### 4. Sessions Table
+#### 4. Carts Table
+
+This table stores shopping carts for both authenticated and anonymous users.
+
+```sql
+CREATE TABLE carts (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+**Key Design Decisions:**
+
+- **`user_id` is optional (`NULL` allowed)**: Supports anonymous shopping carts. When a user logs in, their cart can be associated with their user ID.
+- **`ON DELETE SET NULL`**: If a user is deleted, their cart remains (useful for order history or anonymous carts becoming orphaned).
+
+Then, this table stores products added to shopping carts.
+
+```sql
+CREATE TABLE cart_items(
+  id SERIAL PRIMARY KEY,
+  cart_id INTEGER NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  quantity INTEGER NOT NULL CHECK (quantity > 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(cart_id, product_id)
+);
+```
+
+**Key Design Decisions:**
+
+- **`UNIQUE(cart_id, product_id)`**: Prevents duplicate products in the same cart. Enables efficient upsert operations.
+- **`CHECK (quantity > 0)`**: Database-level validation ensures quantity is always positive.
+- **`ON DELETE CASCADE`**: When a cart is deleted, all its items are automatically removed.
+
+#### 5. Sessions Table
 
 Stores server-side session data for authentication.
 
@@ -735,6 +813,41 @@ CREATE INDEX idx_session_expire ON sessions (expire);
 - **JSONB for session data**: Flexible storage for user info
 - **Index on expire**: Efficient cleanup of expired sessions
 - **Used by express-session**: Automatically managed by middleware
+
+#### 6. Orders and order_items Table
+
+Stores order headers with customer and shipping information.
+
+```sql
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    email VARCHAR(255) NOT NULL,
+    shipping_info JSONB NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    total INTEGER NOT NULL CHECK (total >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+Stores items from orders table.
+
+```sql
+CREATE TABLE order_items(
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+    title TEXT NOT NULL,
+    img_src TEXT NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    price INTEGER NOT NULL CHECK (price >= 0),
+    line_total INTEGER NOT NULL CHECK (line_total >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(order_id, product_id)
+);
+```
 
 ### Migration Strategy (dbmate)
 
@@ -1070,7 +1183,9 @@ Models define the **shape of data** throughout the application. They are TypeScr
 src/models/
 ├── category.model.ts
 ├── product.model.ts
-└── user.model.ts
+├── user.model.ts
+├── cart.model.ts
+└── order.model.ts
 ```
 
 #### Example: Category Model
@@ -1163,6 +1278,109 @@ export function toUserDto(user: User): UserDto {
 - No sensitive fields exist
 - No transformation needed
 
+#### Example: Cart Model with DTO
+
+```typescript
+// src/models/cart.model.ts
+export interface Cart {
+  id: number;
+  userId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CartItem {
+  id: number;
+  cartId: number;
+  productId: number;
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Enriched cart item with product details
+export interface HydratedCartItem {
+  productId: number;
+  title: string;
+  imageUrl: string | null;
+  quantity: number;
+  unitPrice: number; // Price in cents
+  lineTotal: number; // quantity * unitPrice (in cents)
+}
+
+// Complete cart representation for API responses
+export interface CartDto {
+  id: number;
+  items: HydratedCartItem[];
+  totals: {
+    itemCount: number; // Total number of items
+    grandTotal: number; // Total price in cents
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+#### Example Order model with DTO
+
+Modela la orden, sus items y DTOs usados por repositorios/servicios.
+
+```typescript
+// src/models/order.model.ts
+export interface ShippingInfo {
+  firstName: string;
+  lastName: string;
+  company?: string | undefined;
+  address: string;
+  city: string;
+  country: string;
+  state: string;
+  postalCode: string;
+  phone: string;
+}
+
+export interface Order {
+  id: number;
+  userId: number | null;
+  email: string;
+  shippingInfo: ShippingInfo;
+  status: string;
+  total: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  id: number;
+  orderId: number;
+  productId: number;
+  title: string;
+  imgSrc: string | null;
+  quantity: number;
+  price: number;
+  lineTotal: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItemDto {
+  productId: number;
+  title: string;
+  imgSrc: string | null;
+  quantity: number;
+  price: number;
+  lineTotal: number;
+}
+
+export interface OrderDto {
+  userId: number | null;
+  email: string;
+  shippingInfo: ShippingInfo;
+  status: string;
+  total: number;
+}
+```
+
 ### Repositories: Data Access Layer
 
 Repositories are responsible for **all database interactions**. They provide a clean interface for data access.
@@ -1178,7 +1396,9 @@ Repositories are responsible for **all database interactions**. They provide a c
 
 ```
 src/repositories/
+├── cart.repository.ts
 ├── categories.repository.ts
+├── order.repository.ts
 ├── products.repository.ts
 └── users.repository.ts
 ```
@@ -1191,6 +1411,46 @@ Repositories are exported as objects with async methods:
 export const someRepository = {
   async methodName(params): Promise<ReturnType> {
     // SQL query here
+  },
+};
+```
+
+#### Example: Cart Repository
+
+```typescript
+// src/repositories/cart.repository.ts
+export const cartRepository = {
+  async findCartById(id: number): Promise<Cart | null> {
+    const result = await query<Cart>("SELECT * FROM carts WHERE id = $1", [id]);
+    return result.rows[0] || null;
+  },
+
+  async findCartByUserId(userId: number): Promise<Cart | null> {
+    //...
+  },
+
+  async findCartItemsByCartId(cartId: number): Promise<CartItem[]> {
+    //...
+  },
+
+  async createCart(userId?: number): Promise<Cart> {
+    //...
+  },
+
+  async upsertCartItem(
+    cartId: number,
+    productId: number,
+    quantity: number
+  ): Promise<CartItem> {
+    //...
+  },
+
+  async deleteCartItem(cartId: number, productId: number): Promise<void> {
+    //...
+  },
+
+  async clearCart(cartId: number): Promise<void> {
+    //...
   },
 };
 ```
@@ -1224,6 +1484,55 @@ export const categoriesRepository = {
 - Returns `null` for not found (not throwing errors)
 - Parameterized queries (`$1`, `$2`) prevent SQL injection
 - No business logic - just data access
+
+#### Example: Order Repository (Transactions)
+
+The Order Repository demonstrates **transactional operations** - ensuring multiple database operations succeed or fail together (atomicity).
+
+```typescript
+// src/repositories/order.repository.ts
+import { getClient, makeQueryWithClient } from "@/db/index.js";
+import type { Order, OrderDto, OrderItemDto } from "@/models/order.model.js";
+export const orderRepository = {
+  async createOrderWithItems(
+    orderData: OrderDto,
+    items: OrderItemDto[]
+  ): Promise<Order> {
+    //...
+  },
+
+  async getOrdersByUserId(userId: number): Promise<Order[]> {
+    //...
+  },
+
+  async getOrderItemsByOrderId(orderId: number): Promise<OrderItemsDto[]> {
+    //...
+  },
+
+  async getOrder(orderId: number): Promise<Order | null> {
+    //...
+  }
+};
+```
+**Key Points:**
+
+- **Transactions**: `BEGIN` → operations → `COMMIT` or `ROLLBACK`
+- **`getClient()`**: Gets a dedicated `PoolClient` from the connection pool
+- **`makeQueryWithClient(client)`**: Binds all queries to the same client (required for transactions)
+- **Atomicity**: Either all operations succeed (order + all items) or none do
+- **`client.release()`**: Always release in `finally` block to return client to pool
+- **Nullish Coalescing (`??`)**: Use `??` instead of `||` to correctly handle `null`/`undefined` vs `0` or `""`
+- **JSONB Storage**: `shipping_info` is stored as JSONB, so we `JSON.stringify()` before inserting
+- **Snapshot Pattern**: Product data (`title`, `img_src`, `price`) is duplicated in `order_items` to preserve historical order integrity
+
+**Why Transactions Matter:**
+
+When creating an order, you need to:
+
+1. Insert the order record
+2. Insert multiple order items
+
+If step 2 fails (e.g., database error), step 1 would leave an incomplete order. Transactions ensure both steps succeed together or both are rolled back.
 
 #### Example: Products Repository
 
@@ -1320,9 +1629,92 @@ Services contain **all business logic** and orchestrate operations across multip
 
 ```
 src/services/
+├── cart.service.ts
 ├── categories.service.ts
+├── order.service.ts
 ├── products.service.ts
 └── users.service.ts
+```
+
+#### Example: Cart Service
+
+```typescript
+// src/services/cart.service.ts
+import type { Cart, CartDto, HydratedCartItem } from "@/models/cart.models.js";
+import { cartsRepository } from "@/repositories/carts.repository.js";
+import { productsRepository } from "@/repositories/products.repository.js";
+import { NotFoundError } from "@/shared/errors.js";
+export async function findOrCreateCart(
+  userId?: number,
+  cartId?: number
+): Promise<Cart> {
+  let cart: Cart | null = null;
+
+  if (cartId) {
+    cart = await cartsRepository.findCartById(cartId);
+  }
+  if (!cartId && userId) {
+    cart = await cartsRepository.findCartByUserId(userId);
+  }
+  if (!cart) {
+    cart = await cartsRepository.createCart(userId);
+  }
+  return cart;
+}
+
+async function findCart(
+  userId?: number,
+  cartId?: number
+): Promise<Cart | null> {
+  //...
+}
+
+export const cartService = {
+  async getOrCreateCart({
+    userId,
+    cartId,
+  }: {
+    userId?: number | undefined;
+    cartId?: number | undefined;
+  }): Promise<CartDto> {
+    //...
+  },
+
+  async updateCartItem({
+    userId,
+    cartId,
+    productId,
+    quantity,
+  }: {
+    userId: number | undefined;
+    cartId: number | undefined;
+    productId: number;
+    quantity: number;
+  }): Promise<CartDto> {
+    //...
+  },
+
+  async removeCartItem({
+    userId,
+    cartId,
+    productId,
+  }: {
+    userId: number | undefined;
+    cartId: number | undefined;
+    productId: number;
+  }): Promise<void> {
+    //...
+  },
+  async clearCart({
+    userId,
+    cartId,
+  }: {
+    userId: number | undefined;
+    cartId: number | undefined;
+  }): Promise<void> {
+    //...
+  },
+};
 ```
 
 #### Example: Products Service
@@ -1434,6 +1826,85 @@ export const categoriesService = {
 - Still provides a place to add logic later
 - Keeps architecture consistent
 
+#### Example: Order Service
+
+The Order Service demonstrates **complex business logic** - coordinating multiple services and repositories to create an order from a cart.
+
+```typescript
+// src/services/order.service.ts
+import type {
+  Order,
+  OrderItemsDto,
+  ShippingInfo,
+} from "@/models/order.models.js";
+import { cartService } from "./carts.service.js";
+import { BadRequestError } from "@/shared/errors.js";
+import { usersRepository } from "@/repositories/users.repository.js";
+import { orderRepository } from "@/repositories/order.repository.js";
+import { cartsRepository } from "@/repositories/carts.repository.js";
+
+export const orderServices = {
+  async createOrder({
+    userId,
+    cartId,
+    email,
+    shippingInfo,
+    status = "pending",
+  }: {
+    userId: number | null;
+    cartId: number;
+    email: string;
+    shippingInfo: ShippingInfo;
+    status?: string;
+  }): Promise<Order> {
+    //...
+  },
+
+  async getOrdersByUserId(userId: number): Promise<Order[]> {
+    //...
+  },
+
+  async getOrderById(orderId: number): Promise<Order | null> {
+    //...
+  },
+
+  async getOrderItemsByOrderId(orderId: number): Promise<OrderItemsDto[]> {
+    //...
+  },
+};
+
+```
+
+**Key Points:**
+
+- **Coordinates multiple services/repositories**: `cartService`, `orderRepository`, `cartRepository`, `usersRepository`
+- **Business validations**:
+  - Cart must exist and not be empty
+  - Email or userId required
+  - User must exist if userId provided
+- **Data transformation**: Converts `CartItem[]` → `OrderItemDto[]`
+- **Business calculation**: Calculates order total from line totals
+- **Orchestration**: Gets cart → validates → transforms → creates order → clears cart
+- **Error handling**: Throws `BadRequestError` for business rule violations
+- **Side effects**: Clears cart after order creation (ensures cart is empty for next purchase)
+
+**Service Flow:**
+
+1. **Validate cart exists** → Get cart via `cartService`
+2. **Validate business rules** → Cart not empty, email/userId present
+3. **Resolve email** → Use provided email or fetch from user
+4. **Transform data** → Convert cart items to order items format
+5. **Calculate total** → Sum all line totals
+6. **Create order** → Call repository (handles transaction)
+7. **Clean up** → Clear cart after successful order
+
+**Why This Logic is in the Service:**
+
+- **Repository** only handles database operations (INSERT, SELECT)
+- **Service** handles business rules (empty cart check, email resolution)
+- **Service** coordinates multiple repositories/services
+- **Service** transforms data between different formats (Cart → Order)
+
 #### Service Best Practices
 
 ✅ **Do:**
@@ -1524,6 +1995,127 @@ export const registerSchema = z
 
 export const loginSchema = registerSchema.pick({ email: true, password: true });
 ```
+```ts
+// src/schemas/cart.schemas.ts
+import * as z from "zod";
+
+export const cartItemParamsSchema = z.object({
+  productId: z.coerce
+    .number("El ID de producto debe ser un número")
+    .int("El ID de producto debe ser un número entero")
+    .positive("El ID de producto debe ser un número positivo"),
+});
+
+export const cartItemBodySchema = z.object({
+  quantity: z.coerce
+    .number("El campo debe ser un número")
+    .int("El campo debe ser un número entero")
+    .positive("El campo debe ser un número positivo"),
+});
+```
+
+```ts
+// src/schemas/order.schemas.ts
+import * as z from "zod";
+
+export const shippingInfoSchema = z.object({
+  firstName: z
+    .string({ error: "El nombre es obligatorio" })
+    .trim()
+    .min(2, "El nombre debe tener al menos 2 caracteres"),
+
+  lastName: z
+    .string({ error: "El apellido es obligatorio" })
+    .trim()
+    .min(2, "El apellido debe tener al menos 2 caracteres"),
+
+  company: z.string().trim().optional(),
+
+  address: z
+    .string({ error: "La dirección es obligatoria" })
+    .trim()
+    .min(5, "La dirección debe tener al menos 5 caracteres"),
+
+  city: z
+    .string({ error: "La ciudad es obligatoria" })
+    .trim()
+    .min(4, "La ciudad debe tener al menos 2 caracteres"),
+
+  country: z
+    .string({ error: "El país es obligatorio" })
+    .trim()
+    .min(2, "El país debe tener al menos 2 caracteres"),
+
+  state: z
+    .string({ error: "El estado o provincia es obligatorio" })
+    .trim()
+    .min(2, "El estado o provincia debe tener al menos 2 caracteres"),
+
+  postalCode: z
+    .string({ error: "El código postal es obligatorio" })
+    .trim()
+    .min(3, "El código postal debe tener al menos 3 caracteres"),
+
+  phone: z
+    .string({ error: "El teléfono es obligatorio" })
+    .trim()
+    .regex(/^\+?[0-9\s-]+$/, "El número de teléfono no es válido"),
+});
+
+export const createOrderSchema = z.object({
+  email: z
+    .email({
+      error: (issue) => {
+        if (issue.input === undefined) return "El campo email es obligatorio";
+        if (issue.code === "invalid_format")
+          return "Formato de correo inválido";
+        if (issue.code === "invalid_type") return "El campo debe ser un String";
+        return "El correo es inválido";
+      },
+    })
+    .trim()
+    .toLowerCase(),
+  shippingInfo: shippingInfoSchema,
+});
+
+export const orderIdSchema = z.object({
+  orderId: z.coerce
+    .number("El Id de la orden debe ser un numero")
+    .int("El Id de la orden debe ser un numero entero")
+    .positive("El Id de la orden debe ser un numero positivo"),
+});
+```
+
+**Key Points:**
+
+- **Reusable schema**: `shippingInfoSchema` se usa tanto para usuarios autenticados como invitados
+- **Conditional validation**: `createOrderSchema` incluye `email` (solo para usuarios invitados)
+- **Custom error messages**: Mensajes en español con contexto específico
+- **Data sanitization**:
+  - `.trim()` elimina espacios en blanco
+  - `.toLowerCase()` normaliza emails
+- **Validation rules**:
+  - Longitud mínima para campos de texto
+  - Regex para validar formato de teléfono (`/^\+?[0-9\s-]+$/`)
+  - Campo opcional (`company`) usando `.optional()`
+- **Advanced error handling**: Función personalizada para mensajes de error de email según el tipo de error
+- **Type inference**: TypeScript infiere tipos automáticamente con `z.infer<typeof schema>`
+
+**Usage in Controllers:**
+
+```ts
+// Para usuarios autenticados: solo shippingInfo
+if (userId) {
+  const payload = shippingInfoSchema.parse(req.body);
+  // ...
+}
+
+// Para usuarios invitados: email + shippingInfo
+else {
+  const payload = createOrderSchema.parse(req.body);
+  // payload.email y payload.shippingInfo disponibles
+}
+```
 
 ### Controllers: Request/Response Handlers
 
@@ -1542,9 +2134,306 @@ Controllers are the **HTTP layer** - they handle Express requests and responses.
 ```
 src/controllers/
 ├── auth.controller.ts
+├── cart.controller.ts
 ├── categories.controller.ts
-└── products.controller.ts
+├── order.controller.ts
+├── products.controller.ts
+└── users.controller.ts
 ```
+#### Example: Auth Controller
+
+```typescript
+// src/controllers/auth.controller.ts
+import { toUserDto } from "@/models/user.model.js";
+import { loginSchema, registerSchema } from "@/schemas/auth.schemas.js";
+import { usersService } from "@/services/users.service.js";
+import { UnauthorizedError } from "@/shared/errors.js";
+import { verifyPassword } from "@/shared/hash.js";
+import { commitSession, destroySession } from "@/shared/session.js";
+import type { NextFunction, Request, Response } from "express";
+
+export const authController = {
+  async register(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, password } = registerSchema.parse(req.body);
+
+      const user = await usersService.createUser(email, password);
+
+      await commitSession(req, { userId: user.id });
+
+      return res.status(201).json({ data: toUserDto(user) });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  async login(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, password } = loginSchema.parse(req.body);
+
+      const user = await usersService.getUserByEmail(email);
+
+      if (!user) {
+        throw new UnauthorizedError(
+          "Correo electrónico o contraseña inválidos"
+        );
+      }
+
+      const isValidPassword = await verifyPassword(password, user.password);
+
+      if (!isValidPassword) {
+        throw new UnauthorizedError(
+          "Correo electrónico o contraseña inválidos"
+        );
+      }
+
+      await commitSession(req, { userId: user.id });
+
+      return res.status(200).json({ data: toUserDto(user) });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  async me(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        throw new UnauthorizedError("Usuario no autenticado");
+      }
+
+      const user = await usersService.getUserById(userId);
+      if (!user) {
+        throw new UnauthorizedError("Usuario no encontrado");
+      }
+
+      return res.status(200).json({ data: toUserDto(user) });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  async logout(req: Request, res: Response, next: NextFunction) {
+    try {
+      await destroySession(req);
+      return res.sendStatus(204);
+    } catch (error) {
+      return next(error);
+    }
+  },
+};
+```
+
+**Key Points:**
+
+- **Detailed validation**: Field-by-field validation with specific error messages
+- **Security**: Password verification happens here (with service help)
+- **Session management**: Controller handles session operations
+- **DTO usage**: Uses `toUserDto()` to exclude password from response
+- **Consistent error messages**: All in Spanish for this project
+
+#### Example: Carts Controller
+
+```ts
+// src/controllers/cart.controller.ts
+import {
+  cartItemBodySchema,
+  cartItemParamsSchema,
+} from "@/schemas/cart.schemas.js";
+import { cartService } from "@/services/carts.service.js";
+import type { Request, Response, NextFunction } from "express";
+import { saveSession } from "@/shared/session.js";
+
+export const cartController = {
+  async getCart(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId, cartId } = req.session;
+      const cart = await cartService.getOrCreateCart({ userId, cartId });
+
+      if (req.session.cartId !== cart.id) {
+        req.session.cartId = cart.id;
+        await saveSession(req);
+      }
+
+      return res.status(200).json({ data: cart });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  async updateCartItem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId, cartId } = req.session;
+      const { productId } = cartItemParamsSchema.parse(req.params);
+      const { quantity } = cartItemBodySchema.parse(req.body);
+
+      const cart = await cartService.updateCartItem({
+        userId,
+        cartId,
+        productId,
+        quantity,
+      });
+
+      if (req.session.cartId !== cart.id) {
+        req.session.cartId = cart.id;
+        await saveSession(req);
+      }
+
+      return res.status(200).json({ data: cart });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  async removeCartItem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId, cartId } = req.session;
+      const { productId } = cartItemParamsSchema.parse(req.params);
+      await cartService.removeCartItem({ userId, cartId, productId });
+      return res.sendStatus(204);
+    } catch (error) {
+      return next(error);
+    }
+  },
+  async clearCart(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId, cartId } = req.session;
+      await cartService.clearCart({ userId, cartId });
+      return res.sendStatus(204);
+    } catch (error) {
+      return next(error);
+    }
+  },
+};
+```
+#### Example: Categories Controller
+
+```ts
+// src/controllers/categories.controller.ts
+import type { NextFunction, Request, Response } from "express";
+import { categoriesService } from "@/services/categories.service.js";
+
+export const categoriesController = {
+  async getCategories(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const categories = await categoriesService.listCategories();
+      return res.json({ data: categories });
+    } catch (error) {
+      return next(error);
+    }
+  },
+};
+```
+
+#### Example: Orders Controller
+
+The Orders Controller demonstrates **order creation** - handling both authenticated and guest users with session-based cart management.
+
+```typescript
+// src/controllers/order.controller.ts
+import { createOrderSchema } from "@/schemas/order.schemas.js";
+import { orderServices } from "@/services/order.service.js";
+import { BadRequestError, UnauthorizedError } from "@/shared/errors.js";
+import type { Request, Response, NextFunction } from "express";
+import { orderIdSchema } from "@/schemas/order.schemas.js";
+
+export const orderController = {
+  async createOrder(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, shippingInfo } = createOrderSchema.parse(req.body);
+      const userId = req.session?.userId ?? null;
+      const cartId = req.session?.cartId;
+
+      if (!cartId) {
+        throw new BadRequestError("No se encontró el carrito en la sesión");
+      }
+      const order = await orderServices.createOrder({
+        userId,
+        cartId,
+        email,
+        shippingInfo,
+      });
+      return res.status(201).json({ data: order });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  async getUserOrders(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.session;
+      if (!userId) {
+        return res.status(401).json({ error: "Usuario no autorizado" });
+      }
+      const orders = await orderServices.getOrdersByUserId(userId);
+      return res.status(200).json({ data: orders });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  async getOrderItems(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { orderId } = orderIdSchema.parse(req.params);
+      const { userId } = req.session;
+      if (!userId) {
+        throw new UnauthorizedError("Usuario no autorizado");
+      }
+      const order = await orderServices.getOrderById(orderId);
+      if (!order) {
+        throw new BadRequestError("Orden no encontrada");
+      }
+      if (order?.userId !== userId) {
+        throw new UnauthorizedError("no tiene permiso para ver este orden");
+      }
+      const items = await orderServices.getOrderItemsByOrderId(orderId);
+      return res.status(200).json({ data: items });
+    } catch (error) {
+      return next(error);
+    }
+  },
+};
+```
+
+**Key Points:**
+
+- **Zod validation**: Uses `createOrderSchema.parse()` to validate and parse request body
+- **Session extraction**: Gets `userId` and `cartId` from session (supports both authenticated and guest users)
+- **Nullish coalescing**: Uses `??` to safely handle `null`/`undefined` values
+- **Business validation**: Validates cart exists before proceeding (controller-level check)
+- **Service delegation**: All business logic delegated to `orderService`
+- **Consistent response format**: Returns `{ data: order }` with HTTP 201 (Created)
+- **Error handling**: Uses `try-catch` with `next(error)` pattern (caught by error middleware)
+- **HTTP status codes**: Uses 201 for successful creation
+
+**Controller Flow:**
+
+1. **Validate input** → Parse and validate request body with Zod schema
+2. **Extract session** → Get `userId` and `cartId` from session
+3. **Validate cart** → Ensure cart exists (required for order creation)
+4. **Call service** → Delegate to `orderService.createOrder()` (handles email resolution, cart validation, order creation, cart clearing)
+5. **Format response** → Return order with HTTP 201 status
+6. **Handle errors** → Pass errors to error middleware via `next(error)`
+
+**Why This Logic is in the Controller:**
+
+- **Input validation**: Controller validates request structure (Zod)
+- **Session access**: Controller has access to `req.session` (HTTP layer concern)
+- **HTTP formatting**: Controller formats HTTP responses (status codes, JSON structure)
+- **Service delegation**: Business logic (email resolution, cart validation) is in the service layer
+
+**Note on Email Handling:**
+
+The controller always requires `email` in the request body (via `createOrderSchema`). The service layer handles:
+
+- Using provided email for guest users
+- Fetching email from database for authenticated users (if not provided)
+- This design allows flexibility while maintaining validation at the controller level
+
+**Key Points:**
+
+- **4-step pattern**: Extract → Validate → Call Service → Respond
+- Input validation happens here (not in services)
+- Consistent response format: `{ data: ... }`
+- Error handling via `next(error)` (caught by error middleware)
+
+
 
 #### Example: Products Controller
 
@@ -1610,115 +2499,40 @@ export const productsController = {
 - Consistent response format: `{ data: ... }`
 - Error handling via `next(error)` (caught by error middleware)
 
-#### Example: Auth Controller
+#### Example: User Controller
 
-```typescript
-// src/controllers/auth.controller.ts
-export const authController = {
-  async register(req: Request, res: Response, next: NextFunction) {
-    try {
-      // 1. Parse and validate request body
-      const body = req.body as Partial<RegisterRequest>;
-      const email = body.email?.trim() ?? "";
-      const password = body.password ?? "";
-      const confirmPassword = body.confirmPassword ?? "";
+```ts
+// src/controllers/users.controller.ts
+import { userUpdateSchema } from "@/schemas/users.schemas.js";
+import { usersService } from "@/services/users.service.js";
+import { UnauthorizedError } from "@/shared/errors.js";
+import type { Request, Response, NextFunction } from "express";
 
-      const errors: Record<string, string[]> = {};
-
-      if (!email) {
-        errors["email"] = ["El campo email es obligatorio"];
-      } else if (!email.includes("@")) {
-        errors["email"] = ["Formato de correo inválido"];
-      }
-
-      if (!password) {
-        errors["password"] = ["El campo contraseña es obligatorio"];
-      } else if (password.length < 6) {
-        errors["password"] = ["La contraseña debe tener al menos 6 caracteres"];
-      }
-
-      if (!confirmPassword) {
-        errors["confirmPassword"] = [
-          "El campo confirmar contraseña es obligatorio",
-        ];
-      } else if (password && password !== confirmPassword) {
-        errors["confirmPassword"] = ["Las contraseñas no coinciden"];
-      }
-
-      if (Object.keys(errors).length > 0) {
-        throw new ValidationError("Error de validación", errors);
-      }
-
-      // 2. Call service
-      const user = await usersService.createUser(email, password);
-
-      // 3. Manage session
-      await commitSession(req, { userId: user.id });
-
-      // 4. Format response (using DTO!)
-      return res.status(201).json({ data: toUserDto(user) });
-    } catch (error) {
-      return next(error);
-    }
-  },
-
-  async login(req: Request, res: Response, next: NextFunction) {
-    try {
-      const body = req.body as Partial<LoginRequest>;
-      const email = body.email?.trim() ?? "";
-      const password = body.password ?? "";
-
-      const user = await usersService.getUserByEmail(email);
-
-      if (!user) {
-        throw new UnauthorizedError(
-          "Correo electrónico o contraseña inválidos"
-        );
-      }
-
-      const isValidPassword = await verifyPassword(password, user.password);
-
-      if (!isValidPassword) {
-        throw new UnauthorizedError(
-          "Correo electrónico o contraseña inválidos"
-        );
-      }
-
-      await commitSession(req, { userId: user.id });
-
-      return res.status(200).json({ data: toUserDto(user) });
-    } catch (error) {
-      return next(error);
-    }
-  },
-
-  async me(req: Request, res: Response, next: NextFunction) {
+export const usersController = {
+  async updateUser(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.session.userId;
       if (!userId) {
-        throw new UnauthorizedError("Usuario no autenticado");
+        throw new UnauthorizedError("Usuario no autorizado");
       }
 
-      const user = await usersService.getUserById(userId);
-      if (!user) {
-        throw new UnauthorizedError("Usuario no encontrado");
-      }
+      const { email, password } = userUpdateSchema.parse(req.body);
 
-      return res.status(200).json({ data: toUserDto(user) });
+      const payload: { email?: string; password?: string } = {};
+      if (email) payload.email = email;
+      if (password) payload.password = password;
+      const updatedUser = await usersService.updateUserData(userId, payload);
+
+      return res.status(200).json({
+        message: "El usuario se actualizo correctamente",
+        user: updatedUser,
+      });
     } catch (error) {
       return next(error);
     }
   },
 };
 ```
-
-**Key Points:**
-
-- **Detailed validation**: Field-by-field validation with specific error messages
-- **Security**: Password verification happens here (with service help)
-- **Session management**: Controller handles session operations
-- **DTO usage**: Uses `toUserDto()` to exclude password from response
-- **Consistent error messages**: All in Spanish for this project
 
 #### Controller Best Practices
 
@@ -1754,8 +2568,33 @@ Routes define the **HTTP API surface** - they map URLs to controller methods.
 ```
 src/routes/
 ├── auth.routes.ts
+├── cart.routes.ts
 ├── categories.routes.ts
-└── products.routes.ts
+├── order.routes.ts
+├── products.routes.ts
+└── users.routes.ts
+```
+#### Example: Carts Routes
+
+```typescript
+// src/routes/cart.routes.ts
+import { cartsController } from "@/controllers/cart.controller.js";
+import { Router } from "express";
+
+const router = Router();
+
+// GET /api/cart
+router.get("/", cartsController.getCart);
+// PUT /api/cart/items/:productId
+router.put("/items/:productId", cartsController.updateCartItem);
+
+// DELETE /api/cart/items/:productId
+router.delete("/items/:productId", cartsController.removeCartItem);
+
+// POST /api/cart/clear
+router.post("/clear", cartsController.clearCart);
+
+export default router;
 ```
 
 #### Example: Products Routes
@@ -1800,6 +2639,20 @@ export default router;
 - Nested resource pattern: `/categories/:id/products`
 - Can use controllers from different domains
 
+#### Example: Orders Routes
+
+```typescript
+import { ordersController } from "@/controllers/order.controller.js";
+import { Router } from "express";
+
+const router = Router();
+
+router.post("/", ordersController.createOrder);
+router.get("/", ordersController.getOrders);
+
+export default router;
+```
+
 #### Example: Auth Routes
 
 ```typescript
@@ -1823,6 +2676,20 @@ export default router;
 - Clear, descriptive paths
 - Logout as POST (not GET) - proper HTTP semantics
 
+#### Example: User Routes
+
+```typescript
+// src/routes/users.routes.ts
+import { Router } from "express";
+import { usersController } from "@/controllers/users.controller.js";
+
+const router = Router();
+
+router.patch("/", usersController.updateUser);
+
+export default router;
+```
+
 #### Main Router
 
 All route modules are aggregated in `src/routes.ts`:
@@ -1833,12 +2700,18 @@ import { Router } from "express";
 import authRoutes from "./routes/auth.routes.js";
 import categoriesRoutes from "@/routes/categories.routes.js";
 import productsRoutes from "@/routes/products.routes.js";
+import usersRoutes from "@/routes/users.routes.js";
+import cartRoutes from "@/routes/cart.routes.js";
+import orderRoutes from "@/routes/order.routes.js";
 
 const router = Router();
 
 router.use("/api/", authRoutes);
 router.use("/api/categories", categoriesRoutes);
 router.use("/api/products", productsRoutes);
+router.use("/api/profile", usersRoutes);
+router.use("/api/cart", cartRoutes);
+router.use("/api/orders", orderRoutes);
 
 export default router;
 ```
@@ -1849,10 +2722,17 @@ export default router;
 POST   /api/register
 POST   /api/login
 GET    /api/me
+PATCH  /apI/profile
 POST   /api/logout
 GET    /api/categories
 GET    /api/categories/:categoryId/products
 GET    /api/products/:id
+GET    /api/cart
+PUT    /api/cart/items/:productId
+DELETE /api/cart/items/:productId
+POST   /api/cart/clear
+POST   /api/orders
+GET    /api/orders
 ```
 
 #### Route Best Practices
@@ -2636,22 +3516,25 @@ import routes from "@/routes.js";
 
 const app = express();
 
-// 1. Request logging
+// 1. Adds CORS headers to responses
+app.use(cors({...}));
+
+// 2. Request logging
 app.use(morgan("dev"));
 
-// 2. Body parsing
+// 3. Body parsing
 app.use(express.json());
 
-// 3. Session management
+// 4. Session management
 app.use(sessionMiddleware);
 
-// 4. Application routes
+// 5. Application routes
 app.use(routes);
 
-// 5. 404 handler (no route matched)
+// 6. 404 handler (no route matched)
 app.use(notFoundHandler);
 
-// 6. Global error handler
+// 7. Global error handler
 app.use(errorHandler);
 
 export default app;
@@ -2663,16 +3546,19 @@ export default app;
 Incoming Request
    │
    ▼
-1. morgan("dev")              → Log: GET /api/products 200 15ms
+1. cors({...})              → Enables cross-origin requests from the frontend
    │
    ▼
-2. express.json()             → Parse JSON body
+2. morgan("dev")              → Log: GET /api/products 200 15ms
    │
    ▼
-3. sessionMiddleware          → Load session from database
+3. express.json()             → Parse JSON body
    │
    ▼
-4. routes                     → Try to match a route
+4. sessionMiddleware          → Load session from database
+   │
+   ▼
+5. routes                     → Try to match a route
    │
    ├─▶ Route matches          → Execute controller
    │   └─▶ Success            → Send response
@@ -2681,16 +3567,29 @@ Incoming Request
    └─▶ No route matches       → Continue to 404 handler
    │
    ▼
-5. notFoundHandler            → Create NotFoundError
+6. notFoundHandler            → Create NotFoundError
    │
    ▼
-6. errorHandler               → Format error response
+7. errorHandler               → Format error response
    │
    ▼
 Response sent to client
 ```
 
 #### Built-in Middleware
+
+**cors**: Cross-Origin Resource Sharing middleware
+
+```typescript
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+```
 
 **morgan**: HTTP request logger
 
@@ -3765,6 +4664,8 @@ Within each layer, files are grouped by domain:
 src/controllers/
 ├── auth.controller.ts       # Authentication endpoints
 ├── categories.controller.ts # Category management
+├── cart.controller.ts       # Cart management
+├── order.controller.ts      # Order management
 └── products.controller.ts   # Product management
 ```
 
